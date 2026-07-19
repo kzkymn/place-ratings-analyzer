@@ -1,0 +1,58 @@
+# Coverage files
+.coverage
+.coverage.*
+
+# Python compiled files
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables (secrets)
+.env
+
+# Temporary files
+*.tmp
+_tmp/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+nohup.out
+
+# Other repositories
+.go/
+google-maps-scraper/
+
+# Locally assembled Playwright driver (see src/playwright_driver.py)
+.playwright-driver/
+
+# Go workspace files
+go.work.sum
+*.tar.gz
+
+# Claude Code personal/runtime files (do NOT ignore .claude/ wholesale:
+# .claude/skills is a tracked symlink to .agents/skills, and shared config
+# like .claude/settings.json may be added later)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# serena
+.serena/
+
+# Private working notes (never publish)
+.private/

@@ -1,0 +1,17 @@
+{
+  "review_selection": {
+    "recent_years": 1,
+    "selection_mode": "best_worst_pair",
+    "fallback_strategy": "expand_period",
+    "max_years": 3,
+    "min_reviews": 50
+  },
+  "mixed_ratings_workflow": {
+    "star1_plus_star2_threshold_percent": 15
+  },
+  "star5_dominance_check": {
+    "high_ratio_percent": 80,
+    "moderate_ratio_percent": 65,
+    "moderate_count_threshold": 500
+  }
+}

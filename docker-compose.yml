@@ -1,0 +1,40 @@
+# 既定構成: 認証なしの HTTP MCP サーバー。
+#
+#   docker compose up --build
+#     → http://localhost:8888/mcp
+#
+# 用途: Windows の Claude Desktop への接続は stdio 経由（claude_desktop_config.json で
+# `docker run -i --rm place-ratings-analyzer:latest python -m src.server` を直接起動する
+# 方式）を使う。Claude Desktop のカスタムコネクタ（HTTP/HTTPS）は接続元が Anthropic の
+# クラウド側になるため localhost には原理的に到達できず、この HTTP モードでは代替できない。
+# HTTP モードは、OAuth の E2E 疎通確認（tools/oauth_e2e_client.py）や、同一マシン上で動く
+# 他の MCP クライアントからの利用のために残している。
+#
+# OAuth を有効にする場合は docker-compose.auth.yml を明示的に重ねる:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.auth.yml up --build
+#
+# .env が置いてあるだけでは認証は有効にならない（認証をやめた状態で .env が残る、を
+# 事故らせないため、切り替えは常に明示的にする）。
+services:
+  mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: place-ratings-analyzer:latest
+    container_name: place-ratings-analyzer
+    ports:
+      - "8888:8888"
+    # Chromium は既定の 64MB の /dev/shm では落ちることがある
+    shm_size: "1gb"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import socket; socket.create_connection(("127.0.0.1", 8888), timeout=3).close()
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
