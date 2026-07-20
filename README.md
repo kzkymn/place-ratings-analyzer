@@ -102,6 +102,24 @@ replace `"command"` and `"args"` above with:
 "args": ["-e", "docker", "run", "-i", "--rm", "--shm-size=1g", "place-ratings-analyzer:latest", "python", "-m", "src.server"]
 ```
 
+### Helping your AI app proactively use this tool
+
+So that your AI app (e.g. Claude Desktop) proactively uses this MCP server, paste the following
+into a chat and ask it to save this to memory:
+
+```
+---
+name: mcp-research-tooling
+description: Local MCP tools for practical research tasks, including the place-ratings-analyzer
+sources: [chat]
+aliases: [place-ratings-analyzer]
+---
+- [stated] Uses local MCP tools for practical research tasks (e.g. identifying low-rated izakaya in the Shinjuku area)
+- [stated] Wants default place-search/display tools (e.g. location-based search, map display) combined with place-ratings-analyzer when it adds value (e.g. plotting shortlisted candidates on a map for distance/location context) — but only as an addition, never as a substitute for place-ratings-analyzer's own workflow (e.g. area+category search should not replace the individual per-store queries used to surface low-rated candidates, since it biases toward well-known/high-rated results). The guiding principle: enhance the experience, never degrade the existing one.
+```
+
+After saving it, start a new chat — the tool becomes more likely to be used from that point on.
+
 ### [Advanced] [Under development] Running as a remote MCP server
 
 MCP servers can talk to clients in two ways: over stdio (standard I/O), or over

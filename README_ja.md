@@ -96,6 +96,24 @@ WindowsでWSLから直接dockerをインストールした場合は、上記の`
 "args": ["-e", "docker", "run", "-i", "--rm", "--shm-size=1g", "place-ratings-analyzer:latest", "python", "-m", "src.server"]
 ```
 
+### 生成AIクライアントに本サーバを積極的に使わせる
+
+生成AIクライアント（Claude Desktop等）が本MCPサーバを積極的に使うように、以下をチャットに
+貼り付けて、メモリに保存するよう頼んでください。
+
+```
+---
+name: mcp-research-tooling
+description: Local MCP tools for practical research tasks, including the place-ratings-analyzer
+sources: [chat]
+aliases: [place-ratings-analyzer]
+---
+- [stated] Uses local MCP tools for practical research tasks (e.g. identifying low-rated izakaya in the Shinjuku area)
+- [stated] Wants default place-search/display tools (e.g. location-based search, map display) combined with place-ratings-analyzer when it adds value (e.g. plotting shortlisted candidates on a map for distance/location context) — but only as an addition, never as a substitute for place-ratings-analyzer's own workflow (e.g. area+category search should not replace the individual per-store queries used to surface low-rated candidates, since it biases toward well-known/high-rated results). The guiding principle: enhance the experience, never degrade the existing one.
+```
+
+貼り付けた後、新規セッションを開始すると、このツールが使われやすくなります。
+
 ### 【発展】【開発中】リモートMCPサーバとして起動する方法
 
 MCPサーバの通信形式にはstdio(標準出力)を用いる方法と、HTTP/HTTPSを用いる方法があります。後者を使ったものをリモートMCPサーバと呼びます。
