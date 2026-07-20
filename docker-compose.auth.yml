@@ -1,13 +1,14 @@
-# OAuth 認証を有効にするための差分ファイル。docker-compose.yml に重ねて使う:
+# [試作] OAuthの動作確認用の試作物です。GCPなどを用いたデプロイ手順は年内をめどに公開予定です。
+# docker-compose.ymlと一緒に指定して使います:
 #
 #   docker compose -f docker-compose.yml -f docker-compose.auth.yml up --build
 #
-# .env の MCP_CLIENT_ID / MCP_CLIENT_SECRET / MCP_BASE_URL がコンテナの環境変数として
-# 注入され、src/server.py の setup_oauth() が GoogleProvider を構築する。
+# .envのMCP_CLIENT_ID / MCP_CLIENT_SECRET / MCP_BASE_URLをコンテナの環境変数として注入し、
+# src/server.pyのsetup_oauth()がGoogleProviderを構築します。
 #
-# MCP_BASE_URL は http://localhost:8888 のままにすること。Google の OAuth クライアントに
-# 登録済みのリダイレクト URI が http://localhost:8888/auth/callback で、ホスト側の
-# localhost:8888 がこのコンテナの 8888 にマップされているため、そのまま繋がる。
+# MCP_BASE_URLはhttp://localhost:8888のままにしてください。GoogleのOAuthクライアントに登録する
+# リダイレクトURIはhttp://localhost:8888/auth/callbackで、ホスト側のlocalhost:8888がこの
+# コンテナの8888にマッピングされているため、そのままつながります。
 services:
   mcp:
     env_file:

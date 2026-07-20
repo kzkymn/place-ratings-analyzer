@@ -1,21 +1,19 @@
-# 既定構成: 認証なしの HTTP MCP サーバー。
+# 既定はOAuth認証なしのHTTP MCPサーバーです。
 #
 #   docker compose up --build
 #     → http://localhost:8888/mcp
 #
-# 用途: Windows の Claude Desktop への接続は stdio 経由（claude_desktop_config.json で
-# `docker run -i --rm place-ratings-analyzer:latest python -m src.server` を直接起動する
-# 方式）を使う。Claude Desktop のカスタムコネクタ（HTTP/HTTPS）は接続元が Anthropic の
-# クラウド側になるため localhost には原理的に到達できず、この HTTP モードでは代替できない。
-# HTTP モードは、OAuth の E2E 疎通確認（tools/oauth_e2e_client.py）や、同一マシン上で動く
-# 他の MCP クライアントからの利用のために残している。
+# 用途: もともとは本サーバーと同一マシン上で動くMCPクライアントからの利用を想定していました。
+# しかし、いくつかのクライアントソフト（例: Claude Desktop、ChatGPT Desktop）とは連携できない
+# ことが分かったため、いまは参考としてこのファイルを公開しています。
+# - Claude Desktopの場合: インターネットで公開されたMCPサーバーにしかアクセスできないため、このファイルは使えません。
+# - ChatGPT Desktopの場合: 専用トンネル経由でローカルのMCPサーバーと連携するため、このファイルは不要です。
 #
-# OAuth を有効にする場合は docker-compose.auth.yml を明示的に重ねる:
+# OAuthを試したい場合は、docker-compose.auth.ymlも一緒に指定して起動します（試作段階です。
+# 詳しくはそちらのコメントを参照してください）:
 #
 #   docker compose -f docker-compose.yml -f docker-compose.auth.yml up --build
-#
-# .env が置いてあるだけでは認証は有効にならない（認証をやめた状態で .env が残る、を
-# 事故らせないため、切り替えは常に明示的にする）。
+
 services:
   mcp:
     build:
