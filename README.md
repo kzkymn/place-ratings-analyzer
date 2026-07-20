@@ -120,6 +120,15 @@ aliases: [place-ratings-analyzer]
 
 After saving it, start a new chat — the tool becomes more likely to be used from that point on.
 
+### Updating
+
+Pulling repository updates (e.g. `git pull`) doesn't change anything running — the server runs
+from the Docker image, not the repository files. Rebuild the image and restart Claude Desktop:
+
+```bash
+docker build -t place-ratings-analyzer .
+```
+
 ### [Advanced] [Under development] Running as a remote MCP server
 
 MCP servers can talk to clients in two ways: over stdio (standard I/O), or over
