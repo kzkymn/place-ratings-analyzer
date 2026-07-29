@@ -98,21 +98,15 @@ WindowsでWSLから直接dockerをインストールした場合は、上記の`
 
 ### 生成AIクライアントに本サーバを積極的に使わせる
 
-生成AIクライアント（Claude Desktop等）が本MCPサーバを積極的に使うように、以下をチャットに
-貼り付けて、メモリに保存するよう頼んでください。
+生成AIクライアント（Claude Desktop等）がレストラン・施設検索で本MCPサーバを積極的に使うように、
+設定に指示を追加してください。Claude Desktopの場合は**設定 → 一般 → 「Claudeへの指示」**に、
+以下のような一文を追加します。
 
 ```
----
-name: mcp-research-tooling
-description: Local MCP tools for practical research tasks, including the place-ratings-analyzer
-sources: [chat]
-aliases: [place-ratings-analyzer]
----
-- [stated] Uses local MCP tools for practical research tasks (e.g. identifying low-rated izakaya in the Shinjuku area)
-- [stated] Wants default place-search/display tools (e.g. location-based search, map display) combined with place-ratings-analyzer when it adds value (e.g. plotting shortlisted candidates on a map for distance/location context) — but only as an addition, never as a substitute for place-ratings-analyzer's own workflow (e.g. area+category search should not replace the individual per-store queries used to surface low-rated candidates, since it biases toward well-known/high-rated results). The guiding principle: enhance the experience, never degrade the existing one.
+レストラン・施設検索には必ず、place-ratings-analyzerのMCPサーバ（および関連するSKILLS）を使うこと。
 ```
 
-貼り付けた後、新規セッションを開始すると、このツールが使われやすくなります。
+保存した後、新規セッションを開始すると、このツールが使われやすくなります。
 
 ### アップデート方法
 

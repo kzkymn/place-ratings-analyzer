@@ -104,21 +104,16 @@ replace `"command"` and `"args"` above with:
 
 ### Helping your AI app proactively use this tool
 
-So that your AI app (e.g. Claude Desktop) proactively uses this MCP server, paste the following
-into a chat and ask it to save this to memory:
+So that your AI app (e.g. Claude Desktop) proactively uses this MCP server for restaurant/venue
+searches, add an instruction in its settings. In Claude Desktop: **Settings → General →
+"Instructions for Claude"**, and add a line such as:
 
 ```
----
-name: mcp-research-tooling
-description: Local MCP tools for practical research tasks, including the place-ratings-analyzer
-sources: [chat]
-aliases: [place-ratings-analyzer]
----
-- [stated] Uses local MCP tools for practical research tasks (e.g. identifying low-rated izakaya in the Shinjuku area)
-- [stated] Wants default place-search/display tools (e.g. location-based search, map display) combined with place-ratings-analyzer when it adds value (e.g. plotting shortlisted candidates on a map for distance/location context) — but only as an addition, never as a substitute for place-ratings-analyzer's own workflow (e.g. area+category search should not replace the individual per-store queries used to surface low-rated candidates, since it biases toward well-known/high-rated results). The guiding principle: enhance the experience, never degrade the existing one.
+Always use the place-ratings-analyzer MCP server (and any related skills) for restaurant/venue
+searches.
 ```
 
-After saving it, start a new chat — the tool becomes more likely to be used from that point on.
+After saving, start a new chat — the tool becomes more likely to be used from that point on.
 
 ### Updating
 
