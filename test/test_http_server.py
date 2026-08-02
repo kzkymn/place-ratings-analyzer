@@ -115,6 +115,38 @@ class TestHTTPServerStartup:
         # Verify mcp.run() was called without parameters
         mock_mcp.run.assert_called_once_with()
 
+    @patch('src.server.init_pipeline')
+    @patch('src.server.mcp')
+    @patch.dict('os.environ', {'PORT': '9090'})
+    def test_http_server_uses_port_env_var_when_no_flag_given(self, mock_mcp, mock_init):
+        """Cloud Run injects $PORT; without --port, that value should be used"""
+        mock_init.return_value = True
+
+        with patch('sys.argv', ['src.server', '--transport', 'http', '--host', '0.0.0.0']):
+            from src import server
+            try:
+                server.main()
+            except SystemExit:
+                pass
+
+        mock_mcp.run.assert_called_once_with(transport='http', host='0.0.0.0', port=9090)
+
+    @patch('src.server.init_pipeline')
+    @patch('src.server.mcp')
+    @patch.dict('os.environ', {}, clear=True)
+    def test_http_server_defaults_to_8000_without_port_env_var(self, mock_mcp, mock_init):
+        """Without $PORT and without --port, the local-dev default of 8000 is preserved"""
+        mock_init.return_value = True
+
+        with patch('sys.argv', ['src.server', '--transport', 'http', '--host', '0.0.0.0']):
+            from src import server
+            try:
+                server.main()
+            except SystemExit:
+                pass
+
+        mock_mcp.run.assert_called_once_with(transport='http', host='0.0.0.0', port=8000)
+
 
 class TestOAuthConfiguration:
     """Test OAuth/OIDC configuration from environment variables"""

@@ -32,7 +32,8 @@ FROM python:3.12-slim-trixie
 
 ENV PLAYWRIGHT_DRIVER_PATH=/opt/ms-playwright-go \
     PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PORT=8888
 
 # Chromium の実行に必要な共有ライブラリと、日本語表示用フォント。
 # （Chromium 本体は下の PLAYWRIGHT_INSTALL_ONLY で入るので、ここでは依存だけ）
@@ -88,4 +89,6 @@ EXPOSE 8888
 
 # 認証はデフォルト OFF。MCP_CLIENT_ID 等が環境に無ければ setup_oauth() が None を返す。
 # 認証を有効にするには docker-compose.auth.yml を重ねて .env を注入する。
-CMD ["python", "-m", "src.server", "--transport", "http", "--host", "0.0.0.0", "--port", "8888"]
+# ポートは --port を固定せず、上の ENV PORT=8888（未上書き時の既定値）に委ねる。
+# Cloud Run 等は起動時に PORT を独自の値で上書きするため、そちらが自動的に優先される。
+CMD ["python", "-m", "src.server", "--transport", "http", "--host", "0.0.0.0"]

@@ -64,6 +64,32 @@ needed (upstream CDN outage, see `project_playwright_driver_cdn_breakage` in mem
     stays on the local machine and the tunnel client connects outbound only, so no publishing is
     needed.
 
+  **Deployment platform decided: Google Cloud Run** (2026-07-29) — chosen over AWS Lambda (its
+  response streaming is one-directional only, incompatible with streamable HTTP's bidirectional
+  session) and Fly.io (would need a hand-rolled session-affinity mechanism). Cloud Run has both
+  scale-to-zero and a built-in session-affinity feature, and reuses the GCP project that already
+  holds the working OAuth client. Not yet implemented —
+  the server now resolves its port from `$PORT` (2026-07-30, `src/server.py`'s `--port` default
+  and the `Dockerfile`'s `ENV PORT=8888` + `CMD` no longer pinning `--port`), so Cloud Run's
+  injected port is honored automatically. Still outstanding: verifying Chromium's `/dev/shm`
+  needs against Cloud Run's memory allocation (untested — the vendored `google-maps-scraper`
+  has no `--no-sandbox`/launch-args handling, so gVisor compatibility is unverified). A first
+  draft of the deploy script exists at `.private/deploy-cloud-run.sh`
+  (`--execution-environment=gen2`, `--session-affinity`, `--concurrency`, `--timeout`,
+  `--memory`/`--cpu`, `--allow-unauthenticated`, plus a post-deploy `gcloud run services
+  describe --format export` snapshot for drift auditing) — untested, all tunable values are
+  initial guesses, and it's kept private since it names actual project/service identifiers and
+  hasn't been run yet. And restricting access to the intended handful of users. That restriction
+  needs no application code: Cloud
+  Run's own IAM invoker check was ruled out (it would block the OAuth login pages themselves,
+  since MCP clients never present a GCP-signed ID token), so it's handled instead by keeping the
+  Google OAuth consent screen in "Testing" publishing status and curating its built-in "Test
+  users" list (Google blocks anyone else at the consent screen, before any request reaches this
+  server) — no allowlist code or extra secret. See `project_oauth_remote_mcp_setup` in
+  memory for the full comparison history and the GCP-side steps (Artifact Registry, Secret
+  Manager, OAuth redirect URI update, live deploy) that are intentionally deferred pending user
+  sign-off.
+
   An earlier Caddy-based LAN reverse proxy was retired once it became clear no client needed it:
   Claude Desktop works over stdio (the config-file route above, no HTTPS involved), and ChatGPT
   Desktop can use its tunnel. See the OAuth section below for why authentication matters once the
