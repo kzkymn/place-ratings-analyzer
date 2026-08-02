@@ -1,2 +1,1 @@
-fastmcp>=2.12.0
-pytest
+fastmcp==3.2.3

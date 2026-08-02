@@ -5,6 +5,14 @@ description: "Run the pytest test suite, check coverage, or follow the TDD cycle
 
 ## Commands
 
+`requirements.txt` is production-only (what the Dockerfile installs) and deliberately excludes the
+test framework. Install it once per environment, pinned to match what this project's test suite has
+actually been validated against:
+
+```bash
+pip install pytest==8.4.1 coverage==7.10.1 iniconfig==2.1.0 pluggy==1.6.0
+```
+
 ```bash
 # Full suite
 python -m pytest
