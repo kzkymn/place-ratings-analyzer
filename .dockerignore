@@ -1,9 +1,4 @@
 # Build context exclusions
-#
-# 注意: .env をイメージに含めない。含めると src/server.py の load_dotenv() が
-# それを読んでしまい、「認証はデフォルトOFF」という前提が崩れる。
-# OAuth を使う場合は docker-compose.auth.yml が実行時に .env を注入する。
-.env
 
 # VCS / 開発環境
 .git/

@@ -8,11 +8,6 @@
 # ことが分かったため、いまは参考としてこのファイルを公開しています。
 # - Claude Desktopの場合: インターネットで公開されたMCPサーバーにしかアクセスできないため、このファイルは使えません。
 # - ChatGPT Desktopの場合: 専用トンネル経由でローカルのMCPサーバーと連携するため、このファイルは不要です。
-#
-# OAuthを試したい場合は、docker-compose.auth.ymlも一緒に指定して起動します（試作段階です。
-# 詳しくはそちらのコメントを参照してください）:
-#
-#   docker compose -f docker-compose.yml -f docker-compose.auth.yml up --build
 
 services:
   mcp:

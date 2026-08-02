@@ -53,6 +53,5 @@ end-user reading only the README doesn't need it — the LLM surfaces the limita
 naturally if a user asks for review text). The full root-cause narrative is in
 `.agents/skills/run-pipeline/`.
 
-Remote MCP over the internet (OAuth + GCP-based deployment) is a prototype only
-(`docker-compose.auth.yml`). Deployment instructions are planned to be published by the end of
-2026.
+Remote MCP over the internet (OAuth + GCP-based deployment) is a prototype only. Deployment
+instructions are planned to be published by the end of 2026.

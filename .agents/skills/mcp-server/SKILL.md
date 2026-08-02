@@ -42,9 +42,6 @@ FastMCP, Chromium) — see the file's comments for why a Playwright-driver-downl
 needed (upstream CDN outage, see `project_playwright_driver_cdn_breakage` in memory).
 
 - `docker-compose.yml`: HTTP mode, no auth, `http://localhost:8888/mcp`.
-- `docker-compose.auth.yml`: overlay that injects `.env` (OAuth) — `docker compose -f
-  docker-compose.yml -f docker-compose.auth.yml up`. Auth is opt-in and explicit; `.env` sitting on
-  disk does not silently enable it.
 - **Claude Desktop connects via stdio, not HTTP.** `claude_desktop_config.json` runs `docker run -i
   --rm --shm-size=1g place-ratings-analyzer:latest python -m src.server` directly. Claude Desktop's
   HTTP/HTTPS custom-connector feature cannot be used for this while the server runs on localhost:
@@ -119,12 +116,15 @@ Key files:
 section above), OAuth is what lets you restrict usage to specific authorized Google accounts,
 rather than leaving the tool callable by anyone who finds the URL.
 
-Set in `.env` (copy from `.env.example`):
-```
-MCP_CLIENT_ID=<your-client-id>.apps.googleusercontent.com
-MCP_CLIENT_SECRET=GOCSPX-...
-MCP_BASE_URL=http://localhost:8888
-```
+`setup_oauth()` reads three environment variables — `MCP_CLIENT_ID`, `MCP_CLIENT_SECRET`,
+`MCP_BASE_URL` — and returns `None` (no auth) if `MCP_CLIENT_ID` is unset. For the actual
+deployment target (Cloud Run), these are set at deploy time via `gcloud run deploy
+--set-env-vars`/`--set-secrets` (see `.private/deploy-cloud-run.sh`), not read from a local file.
+There is no `.env`-based local convenience layer for this (removed 2026-08-02 along with
+`python-dotenv` and `docker-compose.auth.yml` — it existed only to support repeated local OAuth
+iteration during GoogleProvider's initial bring-up, which is done; re-add it only if that kind of
+iteration becomes a recurring need again). To exercise the OAuth flow locally, export the three
+variables directly before running HTTP mode.
 
 The end-user setup guide (`OAUTH_SETUP.md`) was withdrawn from the public repo and is kept as a
 private draft until the cloud-deployment work resumes — see `project_oauth_remote_mcp_setup` in
@@ -135,4 +135,4 @@ until that future cloud deployment happens.
 Implementation note: `setup_oauth()` doesn't pass `redirect_path` to `GoogleProvider`, so FastMCP's
 default `/auth/callback` applies (not `/oauth/callback`) — this must match what's registered as the
 authorized redirect URI in the Google Cloud Console. `required_scopes` is hardcoded to `openid` +
-`userinfo.email` (not configurable via `.env`).
+`userinfo.email` (not configurable via environment variables).

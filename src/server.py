@@ -14,11 +14,8 @@ import time
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from dotenv import load_dotenv
 from fastmcp import FastMCP
 from fastmcp.server.transforms import ResourcesAsTools
-
-load_dotenv()
 
 from .pipeline import GoogleMapsPipeline, load_json_config
 
