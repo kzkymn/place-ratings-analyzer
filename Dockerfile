@@ -105,7 +105,8 @@ COPY data/ ./data/
 EXPOSE 8888
 
 # 認証はデフォルト OFF。MCP_CLIENT_ID 等が環境に無ければ setup_oauth() が None を返す。
-# 認証を有効にするには docker-compose.auth.yml を重ねて .env を注入する。
+# 認証を有効にするには MCP_CLIENT_ID/MCP_CLIENT_SECRET/MCP_BASE_URL をコンテナの
+# 環境変数として渡す（.agents/skills/mcp-server/SKILL.md 参照）。
 # ポートは --port を固定せず、上の ENV PORT=8888（未上書き時の既定値）に委ねる。
 # Cloud Run 等は起動時に PORT を独自の値で上書きするため、そちらが自動的に優先される。
 CMD ["python", "-m", "src.server", "--transport", "http", "--host", "0.0.0.0"]
