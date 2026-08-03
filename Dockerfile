@@ -49,6 +49,9 @@ ENV PLAYWRIGHT_DRIVER_PATH=/opt/ms-playwright-go \
 
 # Chromium の実行に必要な共有ライブラリと、日本語表示用フォント。
 # （Chromium 本体は下の PLAYWRIGHT_INSTALL_ONLY で入るので、ここでは依存だけ）
+# セキュリティ対応のため libexpat1 をバージョンアップする。libgbm1 等のインストールに
+# 付随して入るバージョンではセキュリティ対応が不十分な場合があるため、
+# 修正された版 2.8.2-1~deb13u1 を指定する。
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
       fonts-noto-cjk \
@@ -60,6 +63,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libcups2t64 \
       libdbus-1-3 \
       libdrm2 \
+      libexpat1=2.8.2-1~deb13u1 \
       libgbm1 \
       libglib2.0-0t64 \
       libnspr4 \
@@ -94,8 +98,9 @@ COPY --from=scraper-builder /out/google_maps_scraper /app/google-maps-scraper/bi
 # driver は上で用意済みなので、ここで入るのは Chromium だけ。
 RUN PLAYWRIGHT_INSTALL_ONLY=1 /app/google-maps-scraper/bin/google_maps_scraper
 
+# セキュリティ対応のため、ベースイメージ同梱の pip を26.2にアップグレードする。
 COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir pip==26.2 && pip install --no-cache-dir -r requirements.txt
 
 # versions.env は実行時にも /app/src/playwright_driver.py が import 時に読む
 COPY config.json versions.env ./
