@@ -109,8 +109,14 @@ COPY --from=scraper-builder /out/google_maps_scraper /app/google-maps-scraper/bi
 RUN PLAYWRIGHT_INSTALL_ONLY=1 /app/google-maps-scraper/bin/google_maps_scraper
 
 # セキュリティ対応のため、ベースイメージ同梱の pip を26.2にアップグレードする。
+# pip install --upgrade は site-packages 内の pip しか更新せず、CPython 本体が
+# ensurepip（venv 新規作成時のブートストラップ用）に同梱している別コピーの
+# pip wheel には触れない。このプロジェクトは venv/ensurepip を実行時に一切
+# 使わない（コード内 grep で未使用確認済み）ため、同梱 wheel ごと削除する。
 COPY requirements.txt ./
-RUN pip install --no-cache-dir pip==26.2 && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir pip==26.2 \
+    && rm -f /usr/local/lib/python3.*/ensurepip/_bundled/pip-*.whl \
+    && pip install --no-cache-dir -r requirements.txt
 
 # versions.env は実行時にも /app/src/playwright_driver.py が import 時に読む
 COPY config.json versions.env ./
