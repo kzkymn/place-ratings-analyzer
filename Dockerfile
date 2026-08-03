@@ -16,8 +16,20 @@ ARG GMS_REPO=https://github.com/gosom/google-maps-scraper.git
 WORKDIR /build
 # バージョンピンは versions.env（single source of truth、run_mcp_server.py も同じものを読む）
 COPY versions.env /versions.env
+# セキュリティ対応のため、go.mod の依存の一部をバージョンアップ。ビルド時に
+# go get で差し替えを実施する（upstream を都度 clone する構成のため、go.mod
+# 自体をこのリポジトリ側で保持・編集する形にはなっていない）。
 RUN . /versions.env \
     && git clone --depth 1 --branch "${GMS_REF}" "${GMS_REPO}" . \
+    && go get \
+         golang.org/x/crypto@v0.53.0 \
+         golang.org/x/net@v0.56.0 \
+         golang.org/x/text@v0.39.0 \
+         github.com/jackc/pgx/v5@v5.9.2 \
+         github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@v1.7.8 \
+         github.com/aws/aws-sdk-go-v2/service/lambda@v1.88.5 \
+         github.com/aws/aws-sdk-go-v2/service/s3@v1.97.3 \
+    && go mod tidy \
     && go mod download \
     && CGO_ENABLED=0 go build -ldflags="-w -s" -o /out/google_maps_scraper .
 
