@@ -52,6 +52,12 @@ ENV PLAYWRIGHT_DRIVER_PATH=/opt/ms-playwright-go \
 # セキュリティ対応のため libexpat1 をバージョンアップする。libgbm1 等のインストールに
 # 付随して入るバージョンではセキュリティ対応が不十分な場合があるため、
 # 修正された版 2.8.2-1~deb13u1 を指定する。
+#
+# セキュリティ対応のため libcairo2 / libcups2t64 を除去する。実際に起動する
+# chrome-headless-shell はこれらを参照しないことを readelf -d / strings で
+# 確認済み。この影響で avahi・krb5/gnutls/p11-kit チェーンもインストールされなく
+# なる（apt-cache rdepends --installed で他パッケージからの依存が無いことを
+# 確認済み）。
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
       fonts-noto-cjk \
@@ -59,8 +65,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libatk-bridge2.0-0t64 \
       libatk1.0-0t64 \
       libatspi2.0-0t64 \
-      libcairo2 \
-      libcups2t64 \
       libdbus-1-3 \
       libdrm2 \
       libexpat1=2.8.2-1~deb13u1 \
@@ -82,6 +86,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Essential パッケージだが、除去後は apt/dpkg を使わないため、Essential 除去
 # 特有のリスクはここでは当たらない。
 RUN apt-get purge -y --allow-remove-essential perl-base
+
+# セキュリティ対応のため gzip も除去する。perl-base と同じ扱い（Essential
+# パッケージだが正式なDepends・メンテナスクリプト参照なし、grep で確認済み）。
+# diffutils は同様に見えたが dpkg 自身が removal 時に diff コマンドを呼ぶため
+# 除去不可（ビルド失敗で判明）、対象から外す。
+RUN apt-get purge -y --allow-remove-essential gzip
 
 WORKDIR /app
 
