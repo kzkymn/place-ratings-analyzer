@@ -74,6 +74,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libxrandr2 \
     && rm -rf /var/lib/apt/lists/*
 
+# 脆弱性対策のため perl 関連のパッケージを除去。perl-base はベースイメージの
+# Essential パッケージだが、除去後は apt/dpkg を使わないため、Essential 除去
+# 特有のリスクはここでは当たらない。
+RUN apt-get purge -y --allow-remove-essential perl-base
+
 WORKDIR /app
 
 # driver 組み立てモジュールだけ先にCOPYし、重いダウンロード層をコード変更から切り離す。
