@@ -15,6 +15,7 @@ env/
 
 # Environment variables (secrets)
 .env
+deploy-cloud-run.env
 
 # Temporary files
 *.tmp
