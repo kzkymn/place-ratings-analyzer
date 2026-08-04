@@ -3,8 +3,8 @@
 """
 OAuth E2E connectivity client (manual integration test)
 
-Connects to http://localhost:8888/mcp with OAuth as a real MCP client and
-verifies the whole flow:
+Connects to the MCP_SERVER_URL as a real MCP client and verifies the whole
+OAuth flow:
   1. OAuth metadata discovery + dynamic client registration (DCR)
   2. Open the Google consent screen in a browser (the only human step)
   3. Establish an MCP session with the issued token
@@ -12,11 +12,12 @@ verifies the whole flow:
 """
 
 import asyncio
+import os
 import sys
 
 from fastmcp import Client
 
-SERVER_URL = "http://localhost:8888/mcp"
+SERVER_URL = os.environ["MCP_SERVER_URL"]
 
 
 async def main():
