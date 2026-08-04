@@ -76,6 +76,17 @@ def setup_oauth() -> Optional[object]:
     - MCP_CLIENT_SECRET: Google OAuth Client Secret
     - MCP_BASE_URL: base URL of the HTTP server (e.g. http://localhost:8888)
 
+    Optional:
+    - MCP_OAUTH_FIRESTORE_DATABASE: Firestore database name to use for OAuth session
+      storage (DCR client registrations, issued tokens) instead of FastMCP's default
+      local-disk file store. Needed on Cloud Run: the local disk is wiped on every
+      scale-to-zero cold start, which otherwise invalidates every session and forces
+      users to re-authenticate far more often than the token's real expiry would
+      suggest. Uses Application Default Credentials - no separate credential wiring
+      needed when running as the Cloud Run service account. Left unset for local
+      development, where the default file store is simpler and sessions don't need
+      to survive container recycling.
+
     Requires fastmcp>=2.12.0.
     Details: https://gofastmcp.com/integrations/google
 
@@ -85,6 +96,7 @@ def setup_oauth() -> Optional[object]:
     client_id = os.getenv("MCP_CLIENT_ID")
     client_secret = os.getenv("MCP_CLIENT_SECRET")
     base_url = os.getenv("MCP_BASE_URL")
+    firestore_database = os.getenv("MCP_OAUTH_FIRESTORE_DATABASE")
 
     if not client_id:
         return None  # no authentication
@@ -104,10 +116,21 @@ def setup_oauth() -> Optional[object]:
         print(f"   Client ID: {client_id}", file=sys.stderr)
         print(f"   Base URL: {base_url}", file=sys.stderr)
 
+        client_storage = None
+        if firestore_database:
+            from key_value.aio.stores.firestore import FirestoreStore
+
+            print(f"   OAuth session storage: Firestore ({firestore_database})", file=sys.stderr)
+            client_storage = FirestoreStore(
+                database=firestore_database,
+                default_collection="oauth-proxy",
+            )
+
         return GoogleProvider(
             client_id=client_id,
             client_secret=client_secret,
             base_url=base_url,
+            client_storage=client_storage,
             required_scopes=[
                 "openid",
                 "https://www.googleapis.com/auth/userinfo.email",

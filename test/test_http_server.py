@@ -173,6 +173,54 @@ class TestOAuthConfiguration:
         assert auth is not None, "OAuth設定がある場合はNone以外を返すべき"
         assert isinstance(auth, GoogleProvider), f"GoogleProviderインスタンスであるべき、実際: {type(auth)}"
 
+    @patch.dict('os.environ', {
+        'MCP_CLIENT_ID': 'test-client-id',
+        'MCP_CLIENT_SECRET': 'test-secret',
+        'MCP_BASE_URL': 'http://localhost:8888',
+    }, clear=False)
+    def test_oauth_setup_uses_default_storage_without_firestore_env_var(self):
+        """Without MCP_OAUTH_FIRESTORE_DATABASE, client_storage is left as FastMCP's default
+        (not a FirestoreStore) - local dev must not require GCP credentials."""
+        import os
+        from key_value.aio.stores.firestore import FirestoreStore
+        from src.server import setup_oauth
+
+        os.environ.pop('MCP_OAUTH_FIRESTORE_DATABASE', None)
+        auth = setup_oauth()
+
+        assert not isinstance(auth._client_storage, FirestoreStore), (
+            "MCP_OAUTH_FIRESTORE_DATABASE未設定ならFirestoreStoreを使うべきではない"
+        )
+
+    @patch.dict('os.environ', {
+        'MCP_CLIENT_ID': 'test-client-id',
+        'MCP_CLIENT_SECRET': 'test-secret',
+        'MCP_BASE_URL': 'http://localhost:8888',
+        'MCP_OAUTH_FIRESTORE_DATABASE': 'test-oauth-db',
+    })
+    @patch('key_value.aio.stores.firestore.FirestoreStore')
+    def test_oauth_setup_uses_firestore_storage_when_configured(self, mock_firestore_store_cls):
+        """With MCP_OAUTH_FIRESTORE_DATABASE set, client_storage is a FirestoreStore -
+        this is what makes OAuth sessions survive Cloud Run scale-to-zero container
+        recycling (FastMCP's default file-based storage lives on the container's
+        ephemeral local disk and is wiped on every cold start). FirestoreStore itself
+        is mocked since its constructor talks to real GCP (Application Default
+        Credentials), which isn't available in this unit test environment - real
+        Firestore behavior is verified via the deployed Cloud Run service instead."""
+        from src.server import setup_oauth
+
+        mock_store_instance = MagicMock()
+        mock_firestore_store_cls.return_value = mock_store_instance
+
+        auth = setup_oauth()
+
+        mock_firestore_store_cls.assert_called_once_with(
+            database='test-oauth-db', default_collection='oauth-proxy'
+        )
+        assert auth._client_storage is mock_store_instance, (
+            "MCP_OAUTH_FIRESTORE_DATABASE設定時はFirestoreStoreインスタンスをclient_storageに渡すべき"
+        )
+
 
 class TestBackwardCompatibility:
     """Test backward compatibility with existing stdio behavior"""
