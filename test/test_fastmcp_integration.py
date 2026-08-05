@@ -269,6 +269,110 @@ class TestFastMcpIntegration(unittest.IsolatedAsyncioTestCase):
             if os.path.exists(valid_csv_path):
                 os.unlink(valid_csv_path)
 
+    async def test_place_ratings_analyze_flags_star5_dominance_stores_at_top_level(self):
+        """
+        When comparing multiple stores in one call, a per-store
+        star5_dominance_notice buried inside each place's rating_advice is
+        easy for the synthesizing LLM to catch for some stores and miss for
+        others (2026-08-05 real-world incident: of several stores returned
+        in one comparison, only one had its notice honored — the rest were
+        introduced as ordinary recommendations even though their JSON also
+        carried the notice). Mirroring the area_search_notice fix (see
+        test_place_ratings_analyze_area_search_notice_for_multiple_hits),
+        the backstop must be a top-level field attached to the same result,
+        listing every flagged store by name, not just a per-store field the
+        LLM has to remember to check one by one.
+        """
+        print("\n--- Testing place_ratings_analyze (star5 dominance flagging, in-process) ---")
+
+        import src.server as server_module
+
+        if server_module.pipeline is None:
+            server_module.init_pipeline()
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as valid_csv:
+            valid_csv.write(
+                "title,category,address,review_rating,review_count,price_range,"
+                "phone,website,emails,reviews_per_rating,open_hours,user_reviews_extended\n"
+            )
+            # Star5-dominant store (85% star5 ratio, exceeds the 80% threshold)
+            valid_csv.write(
+                'Flagged Sushi,Restaurant,Tokyo Japan,4.8,100,¥¥¥¥,03-1234-5678,'
+                'https://flagged.example,flagged@test.com,'
+                '"{""5"":""85"",""4"":""5"",""3"":""5"",""2"":""3"",""1"":""2""}","{}","[]"\n'
+            )
+            # Ordinary well-distributed store (50% star5 ratio, below threshold)
+            valid_csv.write(
+                'Ordinary Cafe,Cafe,Shibuya Japan,4.2,100,¥¥,03-5678-1234,'
+                'https://ordinary.example,ordinary@test.com,'
+                '"{""5"":""50"",""4"":""30"",""3"":""15"",""2"":""3"",""1"":""2""}","{}","[]"\n'
+            )
+            valid_csv_path = valid_csv.name
+
+        try:
+            with patch.object(server_module.pipeline, 'extract_places',
+                               return_value=valid_csv_path):
+                result = await server_module.place_ratings_analyze(
+                    query="test query for star5 dominance flagging",
+                    max_results=2
+                )
+
+            print(f"Result: {result}")
+            self.assertNotIn('error', result)
+
+            flagged = result.get('star5_dominance_review_required')
+            self.assertIsNotNone(flagged)
+            self.assertIn('Flagged Sushi', flagged['store_names'])
+            self.assertNotIn('Ordinary Cafe', flagged['store_names'])
+            self.assertTrue(len(flagged['instruction']) > 0)
+            print("✅ place_ratings_analyze star5 dominance flagging test passed.")
+        finally:
+            if os.path.exists(valid_csv_path):
+                os.unlink(valid_csv_path)
+
+    async def test_place_ratings_analyze_omits_star5_dominance_field_when_none_flagged(self):
+        """
+        No store should be silently included/excluded via an ambiguous
+        empty-vs-missing state: when nothing is flagged, the field must be
+        explicitly None (matching the existing area_search_notice
+        convention), not simply absent from the response.
+        """
+        print("\n--- Testing place_ratings_analyze (no star5 dominance flagged, in-process) ---")
+
+        import src.server as server_module
+
+        if server_module.pipeline is None:
+            server_module.init_pipeline()
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as valid_csv:
+            valid_csv.write(
+                "title,category,address,review_rating,review_count,price_range,"
+                "phone,website,emails,reviews_per_rating,open_hours,user_reviews_extended\n"
+            )
+            valid_csv.write(
+                'Ordinary Cafe,Cafe,Shibuya Japan,4.2,100,¥¥,03-5678-1234,'
+                'https://ordinary.example,ordinary@test.com,'
+                '"{""5"":""50"",""4"":""30"",""3"":""15"",""2"":""3"",""1"":""2""}","{}","[]"\n'
+            )
+            valid_csv_path = valid_csv.name
+
+        try:
+            with patch.object(server_module.pipeline, 'extract_places',
+                               return_value=valid_csv_path):
+                result = await server_module.place_ratings_analyze(
+                    query="test query for no star5 dominance flagged",
+                    max_results=1
+                )
+
+            print(f"Result: {result}")
+            self.assertNotIn('error', result)
+            self.assertIn('star5_dominance_review_required', result)
+            self.assertIsNone(result['star5_dominance_review_required'])
+            print("✅ place_ratings_analyze no-flag test passed.")
+        finally:
+            if os.path.exists(valid_csv_path):
+                os.unlink(valid_csv_path)
+
     async def test_place_ratings_analyze_empty_query(self):
         """
         Test error handling for an empty search query.

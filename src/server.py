@@ -195,6 +195,29 @@ def _strip_internal_advice_fields(place: Dict[str, Any]) -> Dict[str, Any]:
     return place
 
 
+def _build_star5_dominance_flag(places: list) -> Optional[Dict[str, Any]]:
+    """
+    Aggregate per-store star5_dominance_notice into a top-level, hard-to-miss
+    field (2026-08-05: a per-store notice buried in each place's rating_advice
+    got honored for one store in a multi-store comparison and silently missed
+    for others carrying the same notice - the same failure mode area_search_notice
+    was already fixed for, see test_place_ratings_analyze_area_search_notice_for_multiple_hits).
+    Returns None when no store in this response is flagged.
+    """
+    flagged_names = [
+        place['name'] for place in places
+        if place.get('rating_advice', {}).get('star5_dominance_notice')
+    ]
+    if not flagged_names:
+        return None
+    return {
+        "store_names": flagged_names,
+        "instruction": pipeline.rating_analyzer.messages.get(
+            'star5_dominance_review_required_instruction'
+        ),
+    }
+
+
 @mcp.tool(description=_PLACE_RATINGS_ANALYZE_DESCRIPTION)
 async def place_ratings_analyze(
     query: str,
@@ -248,7 +271,8 @@ async def place_ratings_analyze(
             "summary": results['summary'],
             "places": places_for_llm,  # first 10 only (response size limit)
             "full_results_count": len(results['places']),
-            "area_search_notice": results['area_search_notice']
+            "area_search_notice": results['area_search_notice'],
+            "star5_dominance_review_required": _build_star5_dominance_flag(places_for_llm)
         }
 
     except Exception as e:
