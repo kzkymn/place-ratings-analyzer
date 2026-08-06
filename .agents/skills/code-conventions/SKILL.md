@@ -62,7 +62,7 @@ independently of code:
   `RuleBasedRatingAnalyzer._load_patterns()`).
 - **`data/rating_messages.json`**: text common to *every* result regardless of pattern —
   `template_notice`, `general_disclaimer`, and the empty/unknown-pattern fallback text (loaded by
-  `RuleBasedRatingAnalyzer._load_messages()`). Excepted from `.gitignore`'s `*.json` rule.
+  `RuleBasedRatingAnalyzer._load_messages()`).
 - **`data/mcp_tool_descriptions/place_ratings_analyze.md`**: the MCP tool description shown to MCP
   clients/AI agents (loaded by `src/server.py:_load_tool_description()`, passed via
   `@mcp.tool(description=...)`). The function's own docstring is just a one-line pointer to this file.

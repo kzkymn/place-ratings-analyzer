@@ -14,7 +14,7 @@ FROM golang:1.26-trixie AS scraper-builder
 ARG GMS_REPO=https://github.com/gosom/google-maps-scraper.git
 
 WORKDIR /build
-# バージョンピンは versions.env（single source of truth、run_mcp_server.py も同じものを読む）
+# バージョンピンは versions.env（single source of truth）
 COPY versions.env /versions.env
 # セキュリティ対応のため、go.mod の依存の一部をバージョンアップ。ビルド時に
 # go get で差し替えを実施する（upstream を都度 clone する構成のため、go.mod

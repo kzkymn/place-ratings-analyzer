@@ -31,9 +31,9 @@ coverage run -m pytest && coverage report --show-missing
 
 | File | What it covers |
 |------|----------------|
-| `test/test_google_maps_pipeline.py` | CSV parsing, rating analysis, histograms (~29 cases) |
+| `test/test_google_maps_pipeline.py` | CSV parsing, rating analysis, histograms (48 cases) |
 | `test/test_fastmcp_integration.py` | MCP launch + client transport via FastMCP (requires a locally built scraper binary — see `build-go`) |
-| `test/test_http_server.py` | HTTP transport args, server startup modes, OAuth config (9 tests) |
+| `test/test_http_server.py` | HTTP transport args, server startup modes, OAuth config (14 tests) |
 | `test/test_versions_env.py` | version-pin single source of truth (`versions.env`) |
 
 ## TDD Cycle (required for all new functions)

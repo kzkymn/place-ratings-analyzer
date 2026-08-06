@@ -87,7 +87,7 @@ def setup_oauth() -> Optional[object]:
       development, where the default file store is simpler and sessions don't need
       to survive container recycling.
 
-    Requires fastmcp>=2.12.0.
+    Requires the fastmcp version pinned in requirements.txt (GoogleProvider support).
     Details: https://gofastmcp.com/integrations/google
 
     Returns:
@@ -138,7 +138,7 @@ def setup_oauth() -> Optional[object]:
         )
     except ImportError as e:
         print(f"⚠️  GoogleProvider が利用できません: {e}", file=sys.stderr)
-        print("   fastmcp>=2.12.0 が必要です。pip install 'fastmcp>=2.12.0'", file=sys.stderr)
+        print("   requirements.txtに指定されたバージョンのfastmcpが必要です。pip install -r requirements.txt", file=sys.stderr)
         print("   認証なしで起動します。", file=sys.stderr)
         return None
     except Exception as e:
