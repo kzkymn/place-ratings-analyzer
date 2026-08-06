@@ -206,6 +206,33 @@ class TestGoogleMapsPipeline(unittest.TestCase):
 
     @patch('src.pipeline.playwright_driver.ensure_driver', new=lambda: Path('/tmp/fake-driver'))
     @patch('subprocess.run')
+    def test_extract_places_logs_scraper_stdout_even_on_success(self, mock_subprocess):
+        """
+        The Go scraper's own stdout/stderr must reach the diagnostic log even
+        when it exits 0 - previously this was only surfaced on failure
+        (returncode != 0), so a run that "succeeds" but silently finds
+        nothing (e.g. the scraper itself printing a warning about a blocked
+        request or an empty result page) left no trace anywhere, making a
+        real production incident impossible to diagnose from logs alone.
+        """
+        mock_subprocess.return_value = MagicMock(
+            returncode=0, stdout='scraper diagnostic: 0 results for query', stderr='some warning'
+        )
+
+        with patch('tempfile.mkstemp') as mock_temp:
+            mock_temp.return_value = (1, '/tmp/test.csv')
+            with patch('os.fdopen'):
+                with patch('os.close'):
+                    stdout, stderr = io.StringIO(), io.StringIO()
+                    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                        self.pipeline.extract_places('テストクエリ')
+
+                    self.assertEqual('', stdout.getvalue(), "stdout must stay clean (MCP stdio transport)")
+                    self.assertIn('scraper diagnostic: 0 results for query', stderr.getvalue())
+                    self.assertIn('some warning', stderr.getvalue())
+
+    @patch('src.pipeline.playwright_driver.ensure_driver', new=lambda: Path('/tmp/fake-driver'))
+    @patch('subprocess.run')
     def test_extract_places_scraper_failure(self, mock_subprocess):
         """Scraper execution failure"""
         mock_subprocess.return_value = MagicMock(returncode=1, stderr='Go scraper failed with some error')

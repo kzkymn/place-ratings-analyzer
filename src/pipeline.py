@@ -136,7 +136,15 @@ class GoogleMapsPipeline:
             
             if result.returncode != 0:
                 raise RuntimeError(f"Go scraper failed: {result.stderr}")
-            
+
+            # Always surface the scraper's own stdout/stderr, not just on failure -
+            # a run that exits 0 but silently finds nothing (e.g. a blocked request,
+            # an unexpected empty result page) is otherwise undiagnosable from logs.
+            if result.stdout:
+                _diag(f"📤 Go scraper stdout:\n{result.stdout}")
+            if result.stderr:
+                _diag(f"⚠️  Go scraper stderr:\n{result.stderr}")
+
             _diag(f"✅ データ抽出完了 ({execution_time:.2f}秒)")
             # Store execution time as attribute for later use
             self._last_extraction_time = execution_time
