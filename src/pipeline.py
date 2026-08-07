@@ -10,6 +10,7 @@ import os
 import sys
 import json
 import csv
+import threading
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 import time
@@ -27,6 +28,20 @@ def _diag(message: str) -> None:
     (_print_console_output / run_pipeline) may stay on stdout.
     """
     print(message, file=sys.stderr)
+
+
+def _stream_output(pipe, label: str, buffer: List[str]) -> None:
+    """Drain a subprocess pipe line by line, logging each line as it arrives.
+
+    Meant to run in its own thread (one per stdout/stderr) so both streams
+    are drained concurrently - reading only one risks deadlock once the
+    other's OS pipe buffer fills - and so a hang shows up in the logs as it
+    happens, one line at a time with its own log timestamp, instead of
+    staying silent until the process exits (or times out).
+    """
+    for line in pipe:
+        buffer.append(line)
+        _diag(f"{label} {line.rstrip()}")
 
 
 def load_json_config(config_path: Path, defaults: Dict[str, Any]) -> Dict[str, Any]:
@@ -129,21 +144,39 @@ class GoogleMapsPipeline:
             driver_dir = playwright_driver.ensure_driver()
             scraper_env = dict(os.environ, PLAYWRIGHT_DRIVER_PATH=str(driver_dir))
 
+            # Popen + threaded line-by-line draining, not subprocess.run(capture_output=True):
+            # a run that hangs partway through must leave a partial trail in the logs (which
+            # lines arrived, and when) instead of total silence until the process exits or
+            # times out. A production incident where 0-result runs left zero diagnosable
+            # trace for their full duration is what made this gap visible.
             start_time = time.time()
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600,
-                                    env=scraper_env)
-            execution_time = time.time() - start_time
-            
-            if result.returncode != 0:
-                raise RuntimeError(f"Go scraper failed: {result.stderr}")
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                       text=True, env=scraper_env)
+            stdout_lines: List[str] = []
+            stderr_lines: List[str] = []
+            stdout_thread = threading.Thread(
+                target=_stream_output, args=(process.stdout, "📤 stdout:", stdout_lines)
+            )
+            stderr_thread = threading.Thread(
+                target=_stream_output, args=(process.stderr, "⚠️  stderr:", stderr_lines)
+            )
+            stdout_thread.start()
+            stderr_thread.start()
 
-            # Always surface the scraper's own stdout/stderr, not just on failure -
-            # a run that exits 0 but silently finds nothing (e.g. a blocked request,
-            # an unexpected empty result page) is otherwise undiagnosable from logs.
-            if result.stdout:
-                _diag(f"📤 Go scraper stdout:\n{result.stdout}")
-            if result.stderr:
-                _diag(f"⚠️  Go scraper stderr:\n{result.stderr}")
+            try:
+                returncode = process.wait(timeout=600)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+                raise RuntimeError("Go scraper timed out after 600s")
+            finally:
+                stdout_thread.join()
+                stderr_thread.join()
+
+            execution_time = time.time() - start_time
+
+            if returncode != 0:
+                raise RuntimeError(f"Go scraper failed: {''.join(stderr_lines)}")
 
             _diag(f"✅ データ抽出完了 ({execution_time:.2f}秒)")
             # Store execution time as attribute for later use

@@ -37,16 +37,17 @@ class TestIntegration(unittest.TestCase):
         """
         Record the command actually passed to the binary with a spy and verify
         it does not contain -extra-reviews. Unlike a mock, this goes through
-        the real subprocess.run.
+        the real subprocess.Popen (extract_places() streams the scraper's
+        output via Popen, not subprocess.run - see src/pipeline.py).
         """
         captured_cmds = []
-        original_run = subprocess.run
+        original_popen = subprocess.Popen
 
-        def spy_run(cmd, **kwargs):
+        def spy_popen(cmd, **kwargs):
             captured_cmds.append(list(cmd))
-            return original_run(cmd, **kwargs)
+            return original_popen(cmd, **kwargs)
 
-        with patch('subprocess.run', side_effect=spy_run):
+        with patch('subprocess.Popen', side_effect=spy_popen):
             csv_path = self.pipeline.extract_places(
                 '東京タワー', max_results=5, concurrency=2
             )

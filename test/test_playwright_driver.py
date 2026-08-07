@@ -249,15 +249,16 @@ class TestPipelineIntegration(unittest.TestCase):
         pipeline = GoogleMapsPipeline(scraper_path=str(self.scraper_path))
 
         captured = {}
-        real_run = subprocess.run
+        real_popen = subprocess.Popen
 
-        def spy_run(cmd, **kwargs):
+        def spy_popen(cmd, **kwargs):
             captured["env"] = kwargs.get("env")
-            return real_run(["true"], capture_output=True, text=True)
+            return real_popen(["true"], stdout=kwargs.get("stdout"),
+                              stderr=kwargs.get("stderr"), text=kwargs.get("text"))
 
         with patch.object(playwright_driver, "ensure_driver",
                           return_value=self.driver_dir) as mock_ensure, \
-             patch("src.pipeline.subprocess.run", side_effect=spy_run), \
+             patch("src.pipeline.subprocess.Popen", side_effect=spy_popen), \
              contextlib.redirect_stderr(io.StringIO()):
             pipeline.extract_places("テストクエリ")
 

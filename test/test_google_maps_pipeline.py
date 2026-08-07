@@ -13,12 +13,27 @@ import os
 import json
 import csv
 import sys
+import time
 from pathlib import Path
 from unittest.mock import patch, MagicMock, mock_open
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.pipeline import GoogleMapsPipeline
+
+
+def _make_popen_mock(returncode=0, stdout_lines=None, stderr_lines=None):
+    """Build a MagicMock standing in for subprocess.Popen's return value.
+
+    .stdout/.stderr are plain iterators of lines (mirroring how a real Popen's
+    text-mode pipe is iterated line by line), and .wait() returns returncode -
+    matching extract_places()'s Popen + threaded-line-reader implementation.
+    """
+    mock_process = MagicMock()
+    mock_process.stdout = iter(stdout_lines or [])
+    mock_process.stderr = iter(stderr_lines or [])
+    mock_process.wait.return_value = returncode
+    return mock_process
 
 
 class TestGoogleMapsPipeline(unittest.TestCase):
@@ -185,28 +200,28 @@ class TestGoogleMapsPipeline(unittest.TestCase):
         self.assertIn('parse_error', result[0])
     
     @patch('src.pipeline.playwright_driver.ensure_driver', new=lambda: Path('/tmp/fake-driver'))
-    @patch('subprocess.run')
-    def test_extract_places_successful_execution(self, mock_subprocess):
+    @patch('subprocess.Popen')
+    def test_extract_places_successful_execution(self, mock_popen):
         """Successful data extraction run"""
-        mock_subprocess.return_value = MagicMock(returncode=0, stderr='')
-        
+        mock_popen.return_value = _make_popen_mock(returncode=0)
+
         with patch('tempfile.mkstemp') as mock_temp:
             mock_temp.return_value = (1, '/tmp/test.csv')
             with patch('os.fdopen'):
                 with patch('os.close'):
                     result = self.pipeline.extract_places('テストクエリ')
-                    
+
                     self.assertEqual(result, '/tmp/test.csv')
-                    mock_subprocess.assert_called_once()
+                    mock_popen.assert_called_once()
                     # Verify -lang ja is passed
-                    call_args = mock_subprocess.call_args[0][0]
+                    call_args = mock_popen.call_args[0][0]
                     self.assertIn('-lang', call_args, "コマンドに-langが含まれること")
                     lang_idx = call_args.index('-lang')
                     self.assertEqual(call_args[lang_idx + 1], 'ja', "-lang jaが渡されること")
 
     @patch('src.pipeline.playwright_driver.ensure_driver', new=lambda: Path('/tmp/fake-driver'))
-    @patch('subprocess.run')
-    def test_extract_places_logs_scraper_stdout_even_on_success(self, mock_subprocess):
+    @patch('subprocess.Popen')
+    def test_extract_places_logs_scraper_stdout_even_on_success(self, mock_popen):
         """
         The Go scraper's own stdout/stderr must reach the diagnostic log even
         when it exits 0 - previously this was only surfaced on failure
@@ -215,8 +230,10 @@ class TestGoogleMapsPipeline(unittest.TestCase):
         request or an empty result page) left no trace anywhere, making a
         real production incident impossible to diagnose from logs alone.
         """
-        mock_subprocess.return_value = MagicMock(
-            returncode=0, stdout='scraper diagnostic: 0 results for query', stderr='some warning'
+        mock_popen.return_value = _make_popen_mock(
+            returncode=0,
+            stdout_lines=['scraper diagnostic: 0 results for query\n'],
+            stderr_lines=['some warning\n'],
         )
 
         with patch('tempfile.mkstemp') as mock_temp:
@@ -232,18 +249,51 @@ class TestGoogleMapsPipeline(unittest.TestCase):
                     self.assertIn('some warning', stderr.getvalue())
 
     @patch('src.pipeline.playwright_driver.ensure_driver', new=lambda: Path('/tmp/fake-driver'))
-    @patch('subprocess.run')
-    def test_extract_places_scraper_failure(self, mock_subprocess):
+    @patch('subprocess.Popen')
+    def test_extract_places_logs_output_line_by_line(self, mock_popen):
+        """
+        Each line of the scraper's output must be logged as its own _diag()
+        call as it is read, not joined into one block after the process
+        exits - a run that hangs partway through must leave a partial trail
+        in the logs (which lines arrived, and when) instead of total silence
+        until completion. This is what makes a future hang diagnosable.
+        """
+        mock_popen.return_value = _make_popen_mock(
+            returncode=0,
+            stderr_lines=['line one\n', 'line two\n', 'line three\n'],
+        )
+
+        with patch('tempfile.mkstemp') as mock_temp:
+            mock_temp.return_value = (1, '/tmp/test.csv')
+            with patch('os.fdopen'), patch('os.close'):
+                with patch('src.pipeline._diag') as mock_diag:
+                    self.pipeline.extract_places('テストクエリ')
+
+        diag_messages = [call.args[0] for call in mock_diag.call_args_list]
+        self.assertTrue(any('line one' in m for m in diag_messages))
+        self.assertTrue(any('line two' in m for m in diag_messages))
+        self.assertTrue(any('line three' in m for m in diag_messages))
+        # each line must be its own call, not one joined dump
+        self.assertFalse(
+            any('line one' in m and 'line three' in m for m in diag_messages),
+            "各行が個別にログされること（まとめて1回でログされてはならない）"
+        )
+
+    @patch('src.pipeline.playwright_driver.ensure_driver', new=lambda: Path('/tmp/fake-driver'))
+    @patch('subprocess.Popen')
+    def test_extract_places_scraper_failure(self, mock_popen):
         """Scraper execution failure"""
-        mock_subprocess.return_value = MagicMock(returncode=1, stderr='Go scraper failed with some error')
-        
+        mock_popen.return_value = _make_popen_mock(
+            returncode=1, stderr_lines=['Go scraper failed with some error\n']
+        )
+
         with patch('tempfile.mkstemp') as mock_temp:
             mock_temp.return_value = (1, '/tmp/test.csv')
             with patch('os.fdopen'):
                 with patch('os.close'):
                     with self.assertRaisesRegex(RuntimeError, 'Go scraper failed: Go scraper failed with some error'):
                         self.pipeline.extract_places('テストクエリ')
-                    mock_subprocess.assert_called_once()
+                    mock_popen.assert_called_once()
     
     def test_analyze_results_with_valid_csv(self):
         """Analysis of a valid CSV file"""
@@ -330,51 +380,105 @@ Test Restaurant,Restaurant,Tokyo Japan,4.5,100,¥¥¥,03-1234-5678,https://test.
             mock_analyze.assert_called_once_with('/tmp/test.csv', detailed_info=True)
 
     @patch('src.pipeline.playwright_driver.ensure_driver', new=lambda: Path('/tmp/fake-driver'))
-    @patch('subprocess.run')
-    def test_extra_reviews_not_in_subprocess_command_by_default(self, mock_subprocess):
+    @patch('subprocess.Popen')
+    def test_extra_reviews_not_in_subprocess_command_by_default(self, mock_popen):
         """-extra-reviews is not in the subprocess command by default"""
-        mock_subprocess.return_value = MagicMock(returncode=0, stderr='')
+        mock_popen.return_value = _make_popen_mock(returncode=0)
 
         with patch('tempfile.mkstemp') as mock_temp:
             mock_temp.return_value = (1, '/tmp/test.csv')
             with patch('os.fdopen'), patch('os.close'):
                 self.pipeline.extract_places('テストクエリ')
 
-        call_args = mock_subprocess.call_args[0][0]
+        call_args = mock_popen.call_args[0][0]
         self.assertNotIn('-extra-reviews', call_args,
                          "-extra-reviewsはデフォルトでコマンドに含まれてはならない")
 
     @patch('src.pipeline.playwright_driver.ensure_driver', new=lambda: Path('/tmp/fake-driver'))
-    @patch('subprocess.run')
-    def test_extra_reviews_never_in_subprocess_command_even_if_true(self, mock_subprocess):
+    @patch('subprocess.Popen')
+    def test_extra_reviews_never_in_subprocess_command_even_if_true(self, mock_popen):
         """-extra-reviews is not in the command even with extra_reviews=True (disabled)"""
-        mock_subprocess.return_value = MagicMock(returncode=0, stderr='')
+        mock_popen.return_value = _make_popen_mock(returncode=0)
 
         with patch('tempfile.mkstemp') as mock_temp:
             mock_temp.return_value = (1, '/tmp/test.csv')
             with patch('os.fdopen'), patch('os.close'):
                 self.pipeline.extract_places('テストクエリ', extra_reviews=True)
 
-        call_args = mock_subprocess.call_args[0][0]
+        call_args = mock_popen.call_args[0][0]
         self.assertNotIn('-extra-reviews', call_args,
                          "-extra-reviewsは無効化されているためTrueでもコマンドに含まれてはならない")
 
     @patch('src.pipeline.playwright_driver.ensure_driver', new=lambda: Path('/tmp/fake-driver'))
-    @patch('subprocess.run')
-    def test_concurrency_forced_to_one_for_histogram_data(self, mock_subprocess):
+    @patch('subprocess.Popen')
+    def test_concurrency_forced_to_one_for_histogram_data(self, mock_popen):
         """concurrency is always pinned to 1 for rating-distribution retrieval
         (at high parallelism Google serves lite pages and the distribution goes missing)"""
-        mock_subprocess.return_value = MagicMock(returncode=0, stderr='')
+        mock_popen.return_value = _make_popen_mock(returncode=0)
 
         with patch('tempfile.mkstemp') as mock_temp:
             mock_temp.return_value = (1, '/tmp/test.csv')
             with patch('os.fdopen'), patch('os.close'):
                 self.pipeline.extract_places('テストクエリ', concurrency=8)
 
-        call_args = mock_subprocess.call_args[0][0]
+        call_args = mock_popen.call_args[0][0]
         c_idx = call_args.index('-c')
         self.assertEqual(call_args[c_idx + 1], '1',
                          "評価分布取得のため-c は常に1でなければならない")
+
+    @patch('src.pipeline.playwright_driver.ensure_driver', new=lambda: Path('/tmp/fake-driver'))
+    def test_extract_places_streams_real_subprocess_output_before_exit(self):
+        """
+        Integration test with a REAL subprocess (per project convention: a
+        function that shells out must be covered by a real-binary test, not
+        mocks alone). A script that sleeps between two prints must have its
+        first line reach the log well before the sleep completes - proving
+        output is drained live, not buffered until the process exits.
+
+        A mocked Popen cannot prove this: the mock has no wall-clock
+        relationship between "the process is still running" and "a line was
+        logged". That relationship is exactly the property production was
+        missing (a hang produced zero log lines until the process finally
+        exited 60+ seconds later).
+        """
+        slow_script = '/tmp/slow_diag_scraper.sh'
+        with open(slow_script, 'w') as f:
+            f.write(
+                '#!/bin/bash\n'
+                'echo "first line" >&2\n'
+                'sleep 1.5\n'
+                'echo "second line" >&2\n'
+            )
+        os.chmod(slow_script, 0o755)
+        pipeline = GoogleMapsPipeline(scraper_path=slow_script)
+
+        try:
+            first_line_time = []
+            start_time = time.time()
+
+            def _spying_diag(message):
+                if 'first line' in message and not first_line_time:
+                    first_line_time.append(time.time())
+
+            with patch('src.pipeline._diag', side_effect=_spying_diag):
+                pipeline.extract_places('テストクエリ', output_file='/tmp/slow_test.csv')
+
+            self.assertEqual(len(first_line_time), 1, "最初の行が一度だけログされること")
+            elapsed_to_first_line = first_line_time[0] - start_time
+            # The script sleeps 1.5s between the two lines. If "first line"
+            # is only visible after the whole process (sleep included) has
+            # finished, elapsed would be >= 1.5s. Real-time draining must
+            # surface it almost immediately - well under the sleep duration.
+            self.assertLess(
+                elapsed_to_first_line, 1.0,
+                f"最初の行はsleep完了({elapsed_to_first_line:.2f}秒)より十分前にログされるべき"
+                "（バッファされてプロセス終了後にまとめて出ているならこの検証は失敗する）"
+            )
+        finally:
+            if os.path.exists(slow_script):
+                os.unlink(slow_script)
+            if os.path.exists('/tmp/slow_test.csv'):
+                os.unlink('/tmp/slow_test.csv')
 
 
 class TestEdgeCases(unittest.TestCase):
