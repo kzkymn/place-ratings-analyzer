@@ -146,7 +146,7 @@ so it can be reached from anywhere — useful for AI apps that only support conn
 remote MCP server over the internet.
 
 This repository's own detailed walkthrough for one way to do this (Google Cloud Run, with
-Google-account-based access control) lives in `.agents/skills/mcp-server/`.
+Google-account-based access control) lives in `.agents/skills/cloud-run-deploy/`.
 
 Doing this requires some comfort with cloud infrastructure and security concepts —
 authentication, access control, and the ongoing cost of a publicly reachable server. It's

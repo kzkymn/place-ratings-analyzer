@@ -138,7 +138,7 @@ docker compose up --build   # → http://localhost:8888/mcp にアクセスす�
 クライアントを使う場合には、この方法が有用です。
 
 その方法の一つとして、Googleアカウントによるアクセス制限つきのGoogle Cloud Run
-があります。この詳しい手順を、本リポジトリの`.agents/skills/mcp-server/`に
+があります。この詳しい手順を、本リポジトリの`.agents/skills/cloud-run-deploy/`に
 用意しています。
 
 ただし、これを行うにはクラウドインフラとセキュリティに関するある程度の知識が

@@ -18,7 +18,8 @@ records the decisions and constraints behind that picture:
 - Delivered as an **MCP server** (FastMCP; stdio for Claude Desktop, HTTP for other same-machine
   MCP clients), shipped **only** as a self-contained Docker image (Go scraper + Python/FastMCP +
   Chromium); see `.agents/skills/setup-environment/` for the user-facing setup walkthrough and
-  `.agents/skills/mcp-server/` for build/run/OAuth/Docker details.
+  `.agents/skills/mcp-server/` for local run/Docker details (`.agents/skills/oauth-setup/` and
+  `.agents/skills/cloud-run-deploy/` cover remote access).
 - `tools/cli.py` is a dev/smoke-test utility, **not a product entry point** (decided 2026-07-14:
   real usage is always LLM-mediated via MCP).
 - Local non-Docker execution (`python -m src.server` against a manually built environment) is for
@@ -37,7 +38,9 @@ Command details live in `.agents/skills/` (one fact, one place) — this section
 - **Set up the environment from scratch** (WSL, Docker, image build, Claude Desktop registration): `.agents/skills/setup-environment/`
 - **Build the Go scraper** (+ version pins for scraper/Go/Playwright driver): `.agents/skills/build-go/`
 - **Run tests / TDD cycle / coverage**: `.agents/skills/run-tests/`
-- **Start the MCP server** (stdio / HTTP / Docker / OAuth): `.agents/skills/mcp-server/`
+- **Start the MCP server** (stdio / HTTP / Docker): `.agents/skills/mcp-server/`
+- **Configure OAuth for remote/HTTP access**: `.agents/skills/oauth-setup/`
+- **Deploy or redeploy to Cloud Run**: `.agents/skills/cloud-run-deploy/`
 - **Smoke-test the pipeline without MCP** (`tools/cli.py`): `.agents/skills/run-pipeline/`
 - **Coding standards & commit format**: `.agents/skills/code-conventions/`
 
@@ -55,4 +58,5 @@ naturally if a user asks for review text). The full root-cause narrative is in
 
 Remote MCP over the internet (OAuth + GCP-based deployment on Cloud Run) is documented: see
 README.md § "Making this reachable from anywhere" for the user-facing summary and
-`.agents/skills/mcp-server/` for the full deployment walkthrough.
+`.agents/skills/cloud-run-deploy/` (deployment) / `.agents/skills/oauth-setup/` (OAuth client)
+for the full walkthrough.

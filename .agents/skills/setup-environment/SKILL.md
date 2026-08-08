@@ -67,4 +67,5 @@ reaches the same daemon. With Option A (Engine inside WSL), use
 docker compose up --build   # → http://localhost:8888/mcp (no auth)
 ```
 
-OAuth variants and the remote-MCP roadmap: see the `mcp-server` skill.
+OAuth setup: see the `oauth-setup` skill. Deploying for remote access: see the
+`cloud-run-deploy` skill.
