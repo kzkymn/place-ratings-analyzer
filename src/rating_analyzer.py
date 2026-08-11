@@ -121,10 +121,11 @@ class RuleBasedRatingAnalyzer:
 
     def _check_star5_dominance(self, rating_dist: Dict[int, int]) -> Optional[str]:
         """
-        Flag distributions where star5 is disproportionately high relative to
-        peer stores - independent of quality_level/pattern matching, since a
-        legitimate-looking monotonic pattern (e.g. 54321/best_of_best) can
-        still be an extreme outlier in star5 share.
+        Flag distributions where star5 is disproportionately high in absolute terms
+        (fixed thresholds; never compared against any other store's data) -
+        independent of quality_level/pattern matching, since a legitimate-looking
+        monotonic pattern (e.g. 54321/best_of_best) can still cross these
+        thresholds.
 
         Returns the notice text if either threshold is met, else None:
         - star5 ratio > high_ratio_percent, or

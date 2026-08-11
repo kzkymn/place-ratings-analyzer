@@ -4,12 +4,18 @@ Test suite for the "split rating" wording added to x1xxx/xx1xx/xx213/x3xxx/1xxxx
 
 These five patterns all involve a low-star rating (or, for x3xxx, the neutral
 ★3) taking an unexpectedly high rank position - a signal that opinions are
-split rather than uniformly positive. See cross-session memory
-project_rating_patterns_advice_warning_review for the design history: the
-composition instruction ("list this store separately from the recommendation
-list") must be carried on the tool result itself (not only in the tool
-description), mirroring the star5_dominance_notice fix
-(test_star5_dominance_check.py).
+split rather than uniformly positive. The composition instruction ("list
+this store separately from the recommendation list") is written directly
+into each pattern's warning_text in data/rating_patterns.csv, so it travels
+with that specific store's own result data (rating_advice.warning_text)
+rather than being stated only once, generically, in the tool description.
+Additionally, _check_star5_dominance runs unconditionally on every
+distribution regardless of which pattern matched (see
+src/rating_analyzer.py's analyze_distribution), so a split-pattern store
+that also has an extreme star5 ratio gets a second, independent backstop via
+star5_dominance_review_required (src/server.py's _build_star5_dominance_flag)
+- though a split-pattern store without an extreme star5 ratio still relies
+on warning_text alone.
 
 Each pattern's warning_text must only name star ratings that the pattern's
 rank columns actually guarantee - e.g. x1xxx only guarantees rank_2=★1, not

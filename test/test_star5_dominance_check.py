@@ -5,9 +5,9 @@ Test suite for the star5-dominance notice.
 Detects distributions where star5 is disproportionately high - a signal that
 can indicate review manipulation (incentivized/coerced reviews) that a
 percentage-only "mixed ratings" check misses, since the manipulation may not
-push the ratio to an extreme (see cross-session memory
-project_rating_advice_llm_wording_fixes for the empirical basis of the
-thresholds: ratio > 80%, or ratio >= 65% with a star5 count > 500).
+push the ratio to an extreme. Thresholds (ratio > 80%, or ratio >= 65% with a
+star5 count > 500) are empirically calibrated against real store distributions,
+same as DEFAULT_STAR5_DOMINANCE_CONFIG in src/rating_analyzer.py.
 
 This is deliberately independent of quality_level/pattern matching - it must
 fire regardless of which CSV row the distribution happens to match, the same

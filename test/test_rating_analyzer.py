@@ -102,11 +102,14 @@ class TestRuleBasedRatingAnalyzer(unittest.TestCase):
         self.assertIn('比率', result['general_disclaimer'])
         # Must not contain the misleading "fakes a natural-looking distribution" phrasing
         self.assertNotIn('自然に見える分布を', result['general_disclaimer'])
-        # Must not imply the star5-dominance concern is peer-relative: the underlying
-        # check (_check_star5_dominance) uses an absolute threshold by design, so an
-        # entire category (e.g. high-end omakase sushi) can legitimately be flagged in
-        # full - see cross-session memory project_rating_patterns_advice_warning_review
-        # for the 2026-07-19 Shinjuku sushi case this guards against.
+        # Must not imply the star5-dominance concern only matters when it's rare:
+        # the underlying check (_check_star5_dominance) applies the same fixed
+        # absolute threshold to every store independently (no peer/other-store data
+        # involved), so if several stores in one batch all cross it, that must not
+        # read as "so it's normal here, don't worry" - each one is still flagged.
+        # star5_dominance_review_required (src/server.py's _build_star5_dominance_flag)
+        # exists precisely to list every flagged store explicitly, so commonality
+        # across a batch can't suppress the warning for any of them.
         self.assertNotIn('同業他店', result['general_disclaimer'])
 
     def test_disclaimers_are_identical_across_quality_levels(self):
