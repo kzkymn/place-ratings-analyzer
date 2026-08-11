@@ -181,6 +181,15 @@ class GoogleMapsPipeline:
             _diag(f"✅ データ抽出完了 ({execution_time:.2f}秒)")
             # Store execution time as attribute for later use
             self._last_extraction_time = execution_time
+            # scrapemate (unmodified upstream) always logs this exact message via
+            # s.log.Error when a job fails mid-processing - e.g. a bot-check page
+            # has no div[role='feed'], so scroll() throws reading its scrollHeight.
+            # The process can still exit 0, so this is the only signal available
+            # without modifying the vendored Go source.
+            self._last_extraction_had_job_error = any(
+                'error while processing job' in line
+                for line in stdout_lines + stderr_lines
+            )
             return output_file
             
         finally:
@@ -228,6 +237,10 @@ class GoogleMapsPipeline:
                 'area_search_notice': (
                     self.rating_analyzer.messages.get('area_search_notice')
                     if total_places > 1 else None
+                ),
+                'scrape_processing_error_notice': (
+                    self.rating_analyzer.messages.get('scrape_processing_error_notice')
+                    if getattr(self, '_last_extraction_had_job_error', False) else None
                 ),
                 'timing': {
                     'analysis_time': analysis_time

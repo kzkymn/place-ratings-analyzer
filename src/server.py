@@ -272,6 +272,7 @@ async def place_ratings_analyze(
             "places": places_for_llm,  # first 10 only (response size limit)
             "full_results_count": len(results['places']),
             "area_search_notice": results['area_search_notice'],
+            "scrape_processing_error_notice": results['scrape_processing_error_notice'],
             "star5_dominance_review_required": _build_star5_dominance_flag(places_for_llm)
         }
 

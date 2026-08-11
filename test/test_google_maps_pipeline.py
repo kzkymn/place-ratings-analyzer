@@ -294,7 +294,7 @@ class TestGoogleMapsPipeline(unittest.TestCase):
                     with self.assertRaisesRegex(RuntimeError, 'Go scraper failed: Go scraper failed with some error'):
                         self.pipeline.extract_places('テストクエリ')
                     mock_popen.assert_called_once()
-    
+
     def test_analyze_results_with_valid_csv(self):
         """Analysis of a valid CSV file"""
         test_csv_content = '''title,category,address,review_rating,review_count,price_range,phone,website,emails
@@ -353,6 +353,42 @@ Test Restaurant,Restaurant,Tokyo Japan,4.5,100,¥¥¥,03-1234-5678,https://test.
         try:
             result = self.pipeline.analyze_results(csv_path, detailed_info=False)
             self.assertIsNone(result['area_search_notice'])
+        finally:
+            os.unlink(csv_path)
+
+    def test_analyze_results_scrape_processing_error_notice_present_when_flagged(self):
+        """When extract_places detected the scrapemate job-processing-error
+        log line (see src/pipeline.py's extract_places), analyze_results must
+        carry a notice warning that a low/zero result count may not be a
+        genuine zero."""
+        test_csv_content = '''title,category,address,review_rating,review_count,price_range,phone,website,emails
+Test Restaurant,Restaurant,Tokyo Japan,4.5,100,¥¥¥,03-1234-5678,https://test.com,test@test.com'''
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write(test_csv_content)
+            csv_path = f.name
+
+        try:
+            self.pipeline._last_extraction_had_job_error = True
+            result = self.pipeline.analyze_results(csv_path, detailed_info=False)
+            self.assertIsNotNone(result['scrape_processing_error_notice'])
+        finally:
+            os.unlink(csv_path)
+
+    def test_analyze_results_scrape_processing_error_notice_absent_by_default(self):
+        """A clean run (no job-processing-error log line seen) must not carry
+        the notice, and this must hold even before extract_places has ever
+        run (attribute unset) - not just after a clean run sets it False."""
+        test_csv_content = '''title,category,address,review_rating,review_count,price_range,phone,website,emails
+Test Restaurant,Restaurant,Tokyo Japan,4.5,100,¥¥¥,03-1234-5678,https://test.com,test@test.com'''
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write(test_csv_content)
+            csv_path = f.name
+
+        try:
+            result = self.pipeline.analyze_results(csv_path, detailed_info=False)
+            self.assertIsNone(result['scrape_processing_error_notice'])
         finally:
             os.unlink(csv_path)
 
