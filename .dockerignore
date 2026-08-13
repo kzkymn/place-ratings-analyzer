@@ -27,3 +27,8 @@ _tmp/
 .private/
 *.log
 *.tar.gz
+
+# 秘密情報混入防止（現状DockerfileはCOPY . .ではなくversions.env/requirements.txt/
+# config.json/src//data/のように必要なファイルだけを名指しでコピーしており実害はないが、
+# 将来COPY . .等の広いコピーに変わった場合の防御線として維持する）
+.env
