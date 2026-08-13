@@ -28,20 +28,28 @@ policy `displayName`) — safe to rerun after editing a threshold.
 
 ## What Each Alert Covers
 
-| Alert | Metric | Default threshold | Tunable via (top of script) |
-|---|---|---|---|
-| Request count spike | `run.googleapis.com/request_count` | >100 per 5 min | `REQUEST_COUNT_THRESHOLD` |
-| 5xx error rate spike | `run.googleapis.com/request_count` (MQL ratio) | >20% with ≥5 requests/5 min | `ERROR_RATIO_THRESHOLD`, `ERROR_RATIO_MIN_REQUESTS` |
-| Instance/CPU spike | `run.googleapis.com/container/instance_count`, `.../cpu/utilizations` | >3 active instances OR CPU p99 >90%, sustained 3 min | `INSTANCE_COUNT_THRESHOLD`, `CPU_UTILIZATION_THRESHOLD` |
-| OAuth failure spike (proxy) | `logging.googleapis.com/user/oauth_auth_failures` | >3 per 10 min | `OAUTH_FAILURE_THRESHOLD` |
+| Alert | Metric | Env var to set |
+|---|---|---|
+| Request count spike | `run.googleapis.com/request_count` | `REQUEST_COUNT_THRESHOLD` |
+| 5xx error rate spike | `run.googleapis.com/request_count` (MQL ratio) | `ERROR_RATIO_THRESHOLD`, `ERROR_RATIO_MIN_REQUESTS` |
+| Instance/CPU spike | `run.googleapis.com/container/instance_count`, `.../cpu/utilizations` | `INSTANCE_COUNT_THRESHOLD`, `CPU_UTILIZATION_THRESHOLD` |
+| OAuth failure spike (proxy) | `logging.googleapis.com/user/oauth_auth_failures` | `OAUTH_FAILURE_THRESHOLD` |
 
 All four notify the same email channel, address set via the required `ALERT_EMAIL` env var (same
 as `PROJECT_ID`/`REGION`/`SERVICE_NAME`, no default).
 Generated policy JSON is saved under `.private/cloud-monitoring-alerts/` (gitignored) for audit/diff,
 same pattern as `deploy-cloud-run.sh`'s `.private/cloud-run-state/`.
 
-Thresholds are starting points for a low-traffic, scale-to-zero personal-scale project, not tuned
-values — revisit after observing real traffic.
+### Deciding Threshold Values
+
+The script has numeric fallbacks (see the top of `tools/setup-cloud-monitoring-alerts.sh`) so it
+can still run when an env var is left unset, but don't treat those fallbacks as recommended
+values — they're arbitrary placeholders, not derived from this service's actual traffic. Before
+running a `policy-*` subcommand for the first time, work out the right value with whoever's
+running the setup: ask about (or look up, e.g. via Cloud Monitoring's existing metrics) this
+service's real request volume, active-instance pattern, and CPU usage, and set the corresponding
+env var explicitly rather than silently accepting the script's fallback. Revisit each value again
+after observing real traffic against the deployed thresholds.
 
 ## Known Limitation: OAuth Alert Is a Proxy Signal
 
@@ -77,7 +85,10 @@ infra/ops task. Revisit only if the proxy signal proves too noisy in practice.
      ```bash
      REVISION=$(gcloud run services describe "$SERVICE_NAME" --project="$PROJECT_ID" --region="$REGION" \
        --format='value(status.latestReadyRevisionName)')
-     for i in 1 2 3 4; do
+     # Write more lines than whatever OAUTH_FAILURE_THRESHOLD was actually configured with
+     # (check tools/setup-cloud-monitoring-alerts.sh or the policy's own conditionThreshold),
+     # not a fixed count.
+     for i in $(seq 1 $((OAUTH_FAILURE_THRESHOLD + 1))); do
        gcloud logging write "run.googleapis.com%2Fstderr" "synthetic test: oauth token auth failure #$i" \
          --severity=WARNING --project="$PROJECT_ID" --payload-type=text \
          --monitored-resource-type=cloud_run_revision \
