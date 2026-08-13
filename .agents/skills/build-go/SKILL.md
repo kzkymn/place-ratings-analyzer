@@ -50,7 +50,6 @@ The scraper's playwright-go dependency downloads its driver from a **dead CDN** 
 machines; local machines may only work because of a leftover `~/.cache/ms-playwright-go`).
 `src/playwright_driver.py` assembles the driver from live sources instead; it runs automatically
 from `GoogleMapsPipeline` at scrape time (local dev) and at Docker build time.
-Background: `project_playwright_driver_cdn_breakage` in cross-session memory.
 
 ## Troubleshooting
 

@@ -38,16 +38,16 @@ below).
 ## Docker
 
 `Dockerfile` builds a self-contained image (Go scraper cloned from upstream at build time, Python/
-FastMCP, Chromium) — see the file's comments for why a Playwright-driver-download workaround is
-needed (upstream CDN outage, see `project_playwright_driver_cdn_breakage` in memory).
+FastMCP, Chromium) — see the file's comments and the `build-go` skill for why a
+Playwright-driver-download workaround is needed (upstream CDN outage).
 
 - `docker-compose.yml`: HTTP mode, no auth, `http://localhost:8888/mcp`.
 - **Claude Desktop connects via stdio, not HTTP.** `claude_desktop_config.json` runs `docker run -i
   --rm --shm-size=1g place-ratings-analyzer:latest python -m src.server` directly. Claude Desktop's
   HTTP/HTTPS custom-connector feature cannot be used for this while the server runs on localhost:
   the connector's traffic originates from Anthropic's cloud, not the local machine, so `localhost`
-  is unreachable in principle no matter what TLS/reverse-proxy setup is added locally (this was
-  tried and confirmed impossible — see `project_oauth_remote_mcp_setup` in memory). The HTTP mode
+  is unreachable in principle no matter what TLS/reverse-proxy setup is added locally (confirmed by
+  testing a local TLS/reverse-proxy workaround directly). The HTTP mode
   still exists for the OAuth E2E test (`tools/oauth_e2e_client.py`) and for any other MCP client running
   on the same machine.
 - **Remote use of this server (from clients beyond the same machine)** requires OAuth
