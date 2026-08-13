@@ -44,6 +44,17 @@ TIMEOUT="${TIMEOUT:-900s}"
 MEMORY="${MEMORY:-2Gi}"
 CPU="${CPU:-2}"
 
+# If a previous deploy used --no-traffic/--tag (isolated debugging), the
+# service is left pinned to a manual traffic split. Without this, the plain
+# `gcloud run deploy` below would create a new revision but leave it at 0%
+# traffic, silently - the release would appear to succeed while production
+# keeps serving the old revision. Safe to run unconditionally even when
+# already tracking latest.
+gcloud run services update-traffic "${SERVICE_NAME}" \
+  --project="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --to-latest
+
 gcloud run deploy "${SERVICE_NAME}" \
   --project="${PROJECT_ID}" \
   --region="${REGION}" \
